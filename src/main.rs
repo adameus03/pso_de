@@ -19,8 +19,10 @@ struct Config {
 	inertia_coeff: f64,
 	#[arg(long)]
 	iterations: usize,
-	#[arg(long, name = "try-count")]
+	#[arg(long, name = "try-count", conflicts_with = "record")]
 	try_count: Option<usize>,
+	#[arg(long, conflicts_with = "try-count")]
+	record: bool,
 }
 
 struct BatchRunData {
@@ -112,7 +114,13 @@ fn main() {
 			let (x_bounds, y_bounds) = function.get_bounds();
 			threads.push(std::thread::spawn(move || {
 				let mut world = WorldState::new(config.particles, func, x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
-				world.do_all_iterations(config.iterations);
+				if config.record {
+					let serialized_string = serde_json::to_string(&world.do_all_iters_with_record(config.iterations)).unwrap();
+					std::fs::create_dir_all("output").unwrap();
+					std::fs::write(format!("output/{}.json", function_name), serialized_string).unwrap();
+				} else {
+					world.do_all_iterations(config.iterations);
+				}
 				println!("{}: Found optimum at ({}; {}) = {}", function_name, world.best_solution.x, world.best_solution.y, func(world.best_solution));
 			}));
 		}

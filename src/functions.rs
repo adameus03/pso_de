@@ -1,5 +1,5 @@
 use std::{f64::consts::{PI, E}, collections::HashMap};
-use particle_swarm::Vector2D;
+use particle_swarm::vector::Vector2D;
 
 pub trait Function {
 	fn get_function(&self) -> fn(input: Vector2D) -> f64;

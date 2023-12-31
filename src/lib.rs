@@ -1,75 +1,9 @@
-use std::ops::{Mul, Add, Sub, AddAssign};
+pub mod vector;
 
+use vector::Vector2D;
 use rand::Rng;
 
-#[derive(Clone, Debug, Copy)]
-pub struct Vector2D {
-	pub x: f64,
-	pub y: f64
-}
 
-impl Vector2D {
-	fn new(x: f64, y: f64) -> Self {
-		return Vector2D {
-			x, y
-		};
-	}
-	fn clamp(&mut self, x_bounds: (f64, f64), y_bounds: (f64, f64)) {
-		self.x = self.x.clamp(x_bounds.0, x_bounds.1);
-		self.y = self.y.clamp(y_bounds.0, y_bounds.1);
-	}
-}
-
-impl Mul<f64> for Vector2D {
-	type Output = Vector2D;
-
-	fn mul(self, rhs: f64) -> Self::Output {
-		return Vector2D {
-			x: self.x * rhs,
-			y: self.y * rhs,
-		};
-	}
-}
-
-impl Sub for Vector2D {
-	type Output = Vector2D;
-
-	fn sub(self, rhs: Self) -> Self::Output {
-		return Vector2D {
-			x: self.x - rhs.x,
-			y: self.y - rhs.y,
-		};
-	}
-}
-
-impl Add for Vector2D {
-	type Output = Vector2D;
-
-	fn add(self, rhs: Self) -> Self::Output {
-		return Vector2D {
-			x: self.x + rhs.x,
-			y: self.y + rhs.y,
-		};
-	}
-}
-
-impl AddAssign for Vector2D {
-	fn add_assign(&mut self, rhs: Self) {
-		self.x += rhs.x;
-		self.y += rhs.y;
-	}
-}
-
-impl Add<f64> for Vector2D {
-	type Output = Vector2D;
-
-	fn add(self, rhs: f64) -> Self::Output {
-		return Vector2D {
-			x: self.x + rhs,
-			y: self.y + rhs,
-		};
-	}
-}
 
 #[derive(Debug, Clone)]
 pub struct Particle {
@@ -206,5 +140,15 @@ impl WorldState {
 		for _ in 0..iteration_count {
 			self.do_iteration();
 		}
+	}
+
+	pub fn do_all_iters_with_record(&mut self, iteration_count: usize) -> Vec<Vec<Vector2D>> {
+		let mut snapshots = Vec::with_capacity(iteration_count); // each entry is state of particles after one iteration
+		for _ in 0..iteration_count {
+			self.do_iteration();
+			snapshots.push(self.particles.iter().map(|particle| particle.coordinates ).collect::<Vec<_>>());
+		}
+		return snapshots;
+
 	}
 }
