@@ -10,6 +10,7 @@ pub struct Particle {
 	pub current_speed: Vector2D,
 	pub coordinates: Vector2D,
 	pub best_found_solution: Vector2D, // of this particle
+	best_found_solution_value: f64,
 	pub x_bounds: (f64, f64), // lower, upper
 	pub y_bounds: (f64, f64), // lower, upper,
 	pub social_coefficient: f64,
@@ -19,9 +20,10 @@ pub struct Particle {
 
 impl Particle {
 	fn move_particle(&mut self, best_global_solution: Vector2D) {
+		let mut generator = rand::thread_rng();
 		let inertia_part = self.current_speed * self.inertia_coefficient;
-		let social_part = (best_global_solution - self.coordinates) * self.social_coefficient * rand::random::<f64>();
-		let self_part = (self.best_found_solution - self.coordinates) * self.cognitive_coefficient * rand::random::<f64>();
+		let social_part = (best_global_solution - self.coordinates) * self.social_coefficient * generator.gen::<f64>();
+		let self_part = (self.best_found_solution - self.coordinates) * self.cognitive_coefficient * generator.gen::<f64>();
 		self.current_speed = inertia_part + social_part + self_part;
 		self.coordinates += self.current_speed * 1.0;
 
@@ -36,6 +38,7 @@ pub struct WorldState {
 	pub particles: Vec<Particle>,
 	pub function: fn(Vector2D) -> f64,
 	pub best_solution: Vector2D,
+	best_solution_value: f64,
 	x_bounds: (f64, f64),
 	y_bounds: (f64, f64),
 	particle_count: usize,
@@ -53,6 +56,7 @@ impl WorldState {
 			particles: Vec::with_capacity(particle_count),
 			function,
 			best_solution: Vector2D::new(0.0, 0.0),
+			best_solution_value: f64::INFINITY,
 			x_bounds,
 			y_bounds,
 			particle_count,
@@ -78,6 +82,7 @@ impl WorldState {
 				current_speed: Vector2D::new(0.0, 0.0),
 				coordinates: Vector2D::new(x_coord, y_coord),
 				best_found_solution: Vector2D::new(x_coord, y_coord),
+				best_found_solution_value: (self.function)(Vector2D::new(x_coord, y_coord)),
 				x_bounds: self.x_bounds,
 				y_bounds: self.y_bounds,
 				social_coefficient: self.social_coefficient,
@@ -107,20 +112,21 @@ impl WorldState {
 			if particle_solution < best_solution {
 				best_solution = particle_solution;
 				self.best_solution = Vector2D::new(x_coord, y_coord);
+				self.best_solution_value = (self.function)(self.best_solution);
 			}
 		}
 	}
 
 	pub fn update_best_solutions(&mut self) {
-		let mut best_global_solution = (self.function)(self.best_solution);
 		for particle in &mut self.particles {
 			let particle_solution = (self.function)(particle.coordinates);
-			if particle_solution < best_global_solution {
-				best_global_solution = particle_solution;
+			if particle_solution < self.best_solution_value {
+				self.best_solution_value = particle_solution;
 				self.best_solution = particle.coordinates;
 			}
-			if particle_solution < (self.function)(particle.best_found_solution) {
+			if particle_solution < particle.best_found_solution_value {
 				particle.best_found_solution = particle.coordinates;
+				particle.best_found_solution_value = particle_solution;
 			}
 		}
 	}
