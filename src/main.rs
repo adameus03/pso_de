@@ -77,15 +77,14 @@ fn main() {
 	if config.functions.is_empty() {
 		panic!("No functions given");
 	}
-	let test_functions = config.functions.iter().map(|s| {
-		return (s, builtin_fns.get(s).unwrap());
+	let test_functions = config.functions.into_iter().map(|s| {
+		return (s.clone(), builtin_fns.get(&s).unwrap());
 	}).collect::<Vec<_>>();
 
-	// invert the checks to solve multiple functions in parallel if no try_count
-	for (function_name, function) in test_functions {
-		let (x_bounds, y_bounds) = function.get_bounds();
-		let mut world = WorldState::new(config.particles, function.get_function(), x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
-		if let Some(tries) = config.try_count {
+	if let Some(tries) = config.try_count {
+		for (function_name, function) in test_functions {
+			let (x_bounds, y_bounds) = function.get_bounds();
+			let world = WorldState::new(config.particles, function.get_function(), x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
 			let tries_per_thread = tries.div_ceil(num_cpus::get());
 			let mut threads = Vec::with_capacity(num_cpus::get());
 			for _ in 0..num_cpus::get() {
@@ -105,9 +104,20 @@ fn main() {
 				return a;
 			}).unwrap();
 			println!("{}: Finished {} runs. Max solution is {}. Average solution is {}. Min solution is {}.", function_name, result.run_count, result.max_result, result.average, result.min_result);
-		} else {
-			world.do_all_iterations(config.iterations);
-			println!("{}: Found optimum at ({}; {}) = {}", function_name, world.best_solution.x, world.best_solution.y, function.get_function()(world.best_solution));
+		}
+	} else {
+		let mut threads = Vec::new();
+		for (function_name, function) in test_functions {
+			let func = function.get_function();
+			let (x_bounds, y_bounds) = function.get_bounds();
+			threads.push(std::thread::spawn(move || {
+				let mut world = WorldState::new(config.particles, func, x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
+				world.do_all_iterations(config.iterations);
+				println!("{}: Found optimum at ({}; {}) = {}", function_name, world.best_solution.x, world.best_solution.y, func(world.best_solution));
+			}));
+		}
+		for thread in threads {
+			thread.join().unwrap();
 		}
 	}
 }
