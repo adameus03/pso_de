@@ -1,9 +1,6 @@
 pub mod vector;
 
 use vector::Vector2D;
-use rand::Rng;
-
-
 
 #[derive(Debug, Clone)]
 pub struct Particle {
@@ -19,11 +16,10 @@ pub struct Particle {
 }
 
 impl Particle {
-	fn move_particle(&mut self, best_global_solution: Vector2D) {
-		let mut generator = rand::thread_rng();
+	fn move_particle(&mut self, best_global_solution: Vector2D, random_source: &mut fastrand::Rng) {
 		let inertia_part = self.current_speed * self.inertia_coefficient;
-		let social_part = (best_global_solution - self.coordinates) * self.social_coefficient * generator.gen::<f64>();
-		let self_part = (self.best_found_solution - self.coordinates) * self.cognitive_coefficient * generator.gen::<f64>();
+		let social_part = (best_global_solution - self.coordinates) * self.social_coefficient * random_source.f64();
+		let self_part = (self.best_found_solution - self.coordinates) * self.cognitive_coefficient * random_source.f64();
 		self.current_speed = inertia_part + social_part + self_part;
 		self.coordinates += self.current_speed * 1.0;
 
@@ -45,6 +41,7 @@ pub struct WorldState {
 	social_coefficient: f64,
 	cognitive_coefficient: f64,
 	inertia_coefficient: f64,
+	random_generator: fastrand::Rng,
 }
 
 impl WorldState {
@@ -53,6 +50,7 @@ impl WorldState {
 			panic!("Incorrect order of bounds or zero size");
 		}
 		let mut result = WorldState {
+			random_generator: fastrand::Rng::new(),
 			particles: Vec::with_capacity(particle_count),
 			function,
 			best_solution: Vector2D::new(0.0, 0.0),
@@ -71,13 +69,12 @@ impl WorldState {
 	}
 
 	fn create_particles(&mut self) {
-		let mut generator = rand::thread_rng();
 		let x_size = self.x_bounds.1 - self.x_bounds.0;
 		let y_size = self.y_bounds.1 - self.y_bounds.0;
 		let mut best_solution = f64::INFINITY;
 		for _ in 0..self.particle_count {
-			let x_coord = generator.gen::<f64>() * x_size + self.x_bounds.0;
-			let y_coord = generator.gen::<f64>() * y_size + self.y_bounds.0;
+			let x_coord = self.random_generator.f64() * x_size + self.x_bounds.0;
+			let y_coord = self.random_generator.f64() * y_size + self.y_bounds.0;
 			self.particles.push(Particle {
 				current_speed: Vector2D::new(0.0, 0.0),
 				coordinates: Vector2D::new(x_coord, y_coord),
@@ -98,13 +95,12 @@ impl WorldState {
 	}
 
 	pub fn reset(&mut self) {
-		let mut generator = rand::thread_rng();
 		let x_size = self.x_bounds.1 - self.x_bounds.0;
 		let y_size = self.y_bounds.1 - self.y_bounds.0;
 		let mut best_solution = f64::INFINITY;
 		for particle in self.particles.iter_mut() {
-			let x_coord = generator.gen::<f64>() * x_size + self.x_bounds.0;
-			let y_coord = generator.gen::<f64>() * y_size + self.y_bounds.0;
+			let x_coord = self.random_generator.f64() * x_size + self.x_bounds.0;
+			let y_coord = self.random_generator.f64() * y_size + self.y_bounds.0;
 			particle.current_speed = Vector2D::new(0.0, 0.0);
 			particle.coordinates = Vector2D::new(x_coord, y_coord);
 			particle.best_found_solution = Vector2D::new(x_coord, y_coord);
@@ -133,7 +129,7 @@ impl WorldState {
 
 	pub fn move_particles(&mut self) {
 		for particle in &mut self.particles {
-			particle.move_particle(self.best_solution);
+			particle.move_particle(self.best_solution, &mut self.random_generator);
 		}
 	}
 
