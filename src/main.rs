@@ -1,5 +1,3 @@
-mod functions;
-
 use std::ops::AddAssign;
 
 use clap::Parser;
@@ -74,7 +72,7 @@ impl AddAssign<f64> for BatchRunData {
 }
 
 fn main() {
-	let builtin_fns = functions::create_function_list();
+	let builtin_fns = particle_swarm::functions::create_function_list();
 	let config = Config::parse();
 	if config.functions.is_empty() {
 		panic!("No functions given");

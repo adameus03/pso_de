@@ -1,4 +1,5 @@
 pub mod vector;
+pub mod functions;
 
 use vector::Vector2D;
 
