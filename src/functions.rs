@@ -221,7 +221,7 @@ impl Function for McCormick {
 
 fn schaffer2(input: Vector2D) -> f64 {
 	let Vector2D { x, y } = input;
-	return 0.5 + ((x.powi(2) - y.powi(2)).sin().sin() - 0.5) / (1.0 + 0.001 * (x.powi(2) + y.powi(2))).powi(2);
+	return 0.5 + ((x.powi(2) - y.powi(2)).sin().powi(2) - 0.5) / (1.0 + 0.001 * (x.powi(2) + y.powi(2))).powi(2);
 }
 
 struct Schaffer2 {}
