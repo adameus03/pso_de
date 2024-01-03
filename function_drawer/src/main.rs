@@ -3,7 +3,7 @@ use particle_swarm::{functions, vector::Vector2D};
 
 fn main() {
     for (name, function) in functions::create_function_list() {
-		if name != "ackley" {
+		if name != "eggholder" {
 			continue;
 		}
 		let (x_bounds, y_bounds) = function.get_bounds();
