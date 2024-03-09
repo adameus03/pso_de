@@ -194,7 +194,7 @@ fn holder(input: Vector2D) -> f64 {
 	return -((x.sin() * y.cos() * (1.0 - (x.powi(2) + y.powi(2)).sqrt() / PI).abs().exp()).abs());
 }
 
-struct Holder {}
+pub struct Holder {}
 impl Function for Holder {
 	fn get_function(&self) -> fn(input: Vector2D) -> f64 {
 		return holder;

@@ -193,6 +193,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "fastrand",
+ "libc",
  "num_cpus",
  "serde",
  "serde_json",

@@ -2,6 +2,10 @@ use std::ops::{Mul, Add, Sub, AddAssign};
 
 use serde::Serialize;
 
+/**
+ * @TODO Replace Vector2D with VectorND
+ */
+
 #[derive(Clone, Debug, Copy, Serialize)]
 pub struct Vector2D {
 	pub x: f64,

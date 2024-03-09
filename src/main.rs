@@ -1,11 +1,11 @@
 use std::ops::AddAssign;
 
 use clap::Parser;
-use particle_swarm::WorldState;
+use particle_swarm::{de, functions::Function, pso::WorldState};
 
 #[derive(Parser, Clone, Debug)]
 struct Config {
-	#[arg(long, value_delimiter = ',')]
+	#[arg(long, value_delimiter = ',', num_args = 1.., required = true)]
 	functions: Vec<String>,
 	#[arg(long)]
 	particles: usize,
@@ -71,7 +71,52 @@ impl AddAssign<f64> for BatchRunData {
 	}
 }
 
+///<test function for DE>
+#[no_mangle]
+pub unsafe extern "C" fn sphere(input: de::Vector) -> f64 {
+	let mut result = 0.0;
+	for i in 0..input.num_dimensions as isize {
+		unsafe {
+			result += *input.coordinates.offset(i) * *input.coordinates.offset(i);
+		}
+	}
+	return result;
+}
+
+///</test function for DE>
+
 fn main() {
+	println!("Hello from rust!");
+	
+	// [Test the DE library]
+	let mut config = de::DeConfig {
+		population_size: 100,
+	};
+	// Use the holder function and its bounds (declared in src/functions.rs)
+	let mut target = de::DeOptimizationTarget {
+		//f: particle_swarm::functions::Holder::get_function(&self),
+		f: sphere,
+		num_dimensions: 2,
+		/*left_bound::get_bounds().0[0],
+		right_bound::get_bounds().1[0]*/
+		left_bound: -10.0,
+		right_bound: 10.0
+	};
+	// Call the DE library
+	let mut result = unsafe { de::de_minimum(&mut target, &mut config) };
+	println!("DE call returned.");
+	// Print the result coordinates
+	for i in 0..result.num_dimensions as isize {
+		unsafe {
+			println!("Result coordinate {}: {}", i, *result.coordinates.offset(i));
+		}
+	}
+	
+	// Free the result
+	unsafe { de::vector_free_coordinates(&mut result) };
+	// [/Test the DE library]
+	return;
+
 	let builtin_fns = particle_swarm::functions::create_function_list();
 	let config = Config::parse();
 	if config.functions.is_empty() {
