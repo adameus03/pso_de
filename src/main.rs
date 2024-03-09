@@ -71,7 +71,7 @@ impl AddAssign<f64> for BatchRunData {
 	}
 }
 
-///<test function for DE>
+///<test functions for DE>
 #[no_mangle]
 pub unsafe extern "C" fn sphere(input: de::Vector) -> f64 {
 	let mut result = 0.0;
@@ -83,19 +83,41 @@ pub unsafe extern "C" fn sphere(input: de::Vector) -> f64 {
 	return result;
 }
 
-///</test function for DE>
+#[no_mangle]
+pub unsafe extern "C" fn shifted_sphere(input: de::Vector) -> f64 {
+	let mut result = 0.0;
+	for i in 0..input.num_dimensions as isize {
+		let mut a;
+		unsafe {
+			a = *input.coordinates.offset(i);
+		}
+		// Substract i+1
+		a -= (i + 1) as f64;
+		result += a * a;
+	}
+	return result;
+}
 
-fn main() {
+// Quick&dirty test for de_minimum_stub and de_minimum
+fn de_test() {
 	println!("Hello from rust!");
 	
 	// [Test the DE library]
+	let stop_condition = de::DeStopCondition {
+		stype: de::DeStopType::StopAfterIters,
+		union: de::DeLimitation { iters: 100 }
+	};
 	let mut config = de::DeConfig {
 		population_size: 100,
+		crossover_probability: 0.5,
+		amplification_factor: 0.5,
+		lambda: 0.5,
+		stop_condition: stop_condition
 	};
 	// Use the holder function and its bounds (declared in src/functions.rs)
 	let mut target = de::DeOptimizationTarget {
 		//f: particle_swarm::functions::Holder::get_function(&self),
-		f: sphere,
+		f: shifted_sphere,
 		num_dimensions: 2,
 		/*left_bound::get_bounds().0[0],
 		right_bound::get_bounds().1[0]*/
@@ -103,9 +125,10 @@ fn main() {
 		right_bound: 10.0
 	};
 	// Call the DE library
-	let mut result = unsafe { de::de_minimum(&mut target, &mut config) };
-	println!("DE call returned.");
-	// Print the result coordinates
+	println!("Calling de_minimum_stub");
+	let mut result = unsafe { de::de_minimum_stub(&mut target, &mut config) };
+	println!("de_minimum_stub call returned.");
+	// Print the de_minimum_stub result coordinates
 	for i in 0..result.num_dimensions as isize {
 		unsafe {
 			println!("Result coordinate {}: {}", i, *result.coordinates.offset(i));
@@ -113,8 +136,27 @@ fn main() {
 	}
 	
 	// Free the result
-	unsafe { de::vector_free_coordinates(&mut result) };
+	unsafe { de::de_vector_free_coordinates(&mut result) };
+
+	println!("Calling de_minimum");
+	result = unsafe { de::de_minimum(&mut target, &mut config) };
+	println!("de_minimum call returned.");
+	// Print the de_minimum result coordinates
+	for i in 0..result.num_dimensions as isize {
+		unsafe {
+			println!("Result coordinate {}: {}", i, *result.coordinates.offset(i));
+		}
+	}
+	
+	// Free the result
+	unsafe { de::de_vector_free_coordinates(&mut result) };
+	
 	// [/Test the DE library]
+}
+///</test functions for DE>
+
+fn main() {
+	de_test();
 	return;
 
 	let builtin_fns = particle_swarm::functions::create_function_list();
