@@ -1,4 +1,5 @@
 use libc::c_double;
+use crate::vector::VectorN;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -6,6 +7,17 @@ use libc::c_double;
 pub struct Vector {
     pub coordinates: *mut c_double,
     pub num_dimensions: u32
+}
+
+impl Vector {
+    pub unsafe fn to_c<const N: usize>(self) -> VectorN<N> {
+		//Convert input to VectorN
+		let mut coordinates: [f64; N] = [0.0; N];
+		for i in 0..N {
+			coordinates[i] = *self.coordinates.offset(i as isize);
+		}
+		return VectorN::<N>::new(coordinates);
+	}
 }
 
 #[repr(C)]

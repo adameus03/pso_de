@@ -4,5 +4,5 @@
 
 pub mod vector;
 pub mod functions;
-pub mod pso;
+pub mod pso_de;
 pub mod de;
