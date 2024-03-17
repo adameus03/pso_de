@@ -1,8 +1,14 @@
-use std::f64::consts::TAU;
+#![feature(generic_arg_infer)]
+#![allow(clippy::needless_return)]
+
+const FN_SIZE: usize = 30;
+
 use std::ops::AddAssign;
 
 use clap::Parser;
-use particle_swarm::{de, functions::Function, pso::WorldState};
+use particle_swarm::pso::WorldState;
+use particle_swarm::de;
+use std::f64::consts::TAU;
 
 #[derive(Parser, Clone, Debug)]
 struct Config {
@@ -10,24 +16,16 @@ struct Config {
 	functions: Vec<String>,
 	#[arg(long)]
 	particles: usize,
-	#[arg(long, name = "social-coeff")]
+	#[arg(long = "social-coeff")]
 	social_coeff: f64,
-	#[arg(long, name = "cog-coeff")]
+	#[arg(long = "cog-coeff")]
 	cognitive_coeff: f64,
-	#[arg(long, name = "inertia-coeff")]
+	#[arg(long = "inertia-coeff")]
 	inertia_coeff: f64,
 	#[arg(long)]
 	iterations: usize,
-	#[arg(long, name = "try-count", conflicts_with = "record")]
+	#[arg(long = "try-count")]
 	try_count: Option<usize>,
-	#[arg(long, conflicts_with = "try-count")]
-	record: bool,
-	/*#[arg(long, name = "use-pso-de")]
-	use_pso_de: bool,
-	#[arg(long, conflicts_with = "use-pso-de")]
-	use_de: bool*/
-	//#[arg(long)]
-	//test_flag: bool
 }
 
 struct BatchRunData {
@@ -185,7 +183,7 @@ fn de_test() {
 	// Use the holder function and its bounds (declared in src/functions.rs)
 	let mut target = de::DeOptimizationTarget {
 		//f: particle_swarm::functions::Holder::get_function(&self),
-		f: /*shifted_sphere*//*ackley*//*rastrigin*/weierstrass,
+		f: /*shifted_sphere*//*ackley*/rastrigin/*weierstrass*/,
 		num_dimensions: 30,
 		/*left_bound::get_bounds().0[0],
 		right_bound::get_bounds().1[0]*/
@@ -217,7 +215,7 @@ fn de_test() {
 	}
 
 	unsafe {
-		println!("Extreme function value: {}", weierstrass(result));
+		println!("Extreme function value: {}", rastrigin(result));
 	}
 	
 	// Free the result
@@ -228,10 +226,10 @@ fn de_test() {
 ///</test functions for DE>
 
 fn main() {
-	de_test();
-	return;
+	//de_test();
+	//return;
 
-	let builtin_fns = particle_swarm::functions::create_function_list();
+	let builtin_fns = particle_swarm::functions::create_function_list::<FN_SIZE>();
 	let config = Config::parse();
 	if config.functions.is_empty() {
 		panic!("No functions given");
@@ -242,8 +240,8 @@ fn main() {
 
 	if let Some(tries) = config.try_count {
 		for (function_name, function) in test_functions {
-			let (x_bounds, y_bounds) = function.get_bounds();
-			let world = WorldState::new(config.particles, function.get_function(), x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
+			let bounds = function.get_bounds();
+			let world = WorldState::new(config.particles, function.get_function(), bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
 			let tries_per_thread = tries.div_ceil(num_cpus::get());
 			let mut threads = Vec::with_capacity(num_cpus::get());
 			for _ in 0..num_cpus::get() {
@@ -268,17 +266,11 @@ fn main() {
 		let mut threads = Vec::new();
 		for (function_name, function) in test_functions {
 			let func = function.get_function();
-			let (x_bounds, y_bounds) = function.get_bounds();
+			let bounds = function.get_bounds();
 			threads.push(std::thread::spawn(move || {
-				let mut world = WorldState::new(config.particles, func, x_bounds, y_bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
-				if config.record {
-					let serialized_string = serde_json::to_string(&world.do_all_iters_with_record(config.iterations)).unwrap();
-					std::fs::create_dir_all("output").unwrap();
-					std::fs::write(format!("output/{}.json", function_name), serialized_string).unwrap();
-				} else {
-					world.do_all_iterations(config.iterations);
-				}
-				println!("{}: Found optimum at ({}; {}) = {}", function_name, world.best_solution.x, world.best_solution.y, func(world.best_solution));
+				let mut world = WorldState::new(config.particles, func, bounds, config.social_coeff, config.cognitive_coeff, config.inertia_coeff);
+				world.do_all_iterations(config.iterations);
+				println!("{}: Found optimum at {:?} = {}", function_name, world.best_solution.coordinates, func(world.best_solution));
 			}));
 		}
 		for thread in threads {
