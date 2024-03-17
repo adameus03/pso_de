@@ -2,6 +2,7 @@ use libc::c_double;
 
 #[repr(C)]
 #[derive(Debug)]
+#[derive(Clone, Copy)]
 pub struct Vector {
     pub coordinates: *mut c_double,
     pub num_dimensions: u32
@@ -42,7 +43,8 @@ pub struct DeOptimizationTarget {
     pub right_bound: c_double
 }
 
-#[link(name = "differential_evolution")]
+//#[link(name = "differential_evolution")]
+#[link(name = "differential_evolution_cmake")]
 extern "C" {
    pub fn de_minimum(pOptimizationTarget: *mut DeOptimizationTarget, pConfig: *mut DeConfig) -> Vector;
    pub fn de_minimum_stub(pOptimizationTarget: *mut DeOptimizationTarget, pConfig: *mut DeConfig) -> Vector;

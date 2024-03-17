@@ -1,3 +1,4 @@
+use std::f64::consts::TAU;
 use std::ops::AddAssign;
 
 use clap::Parser;
@@ -21,6 +22,12 @@ struct Config {
 	try_count: Option<usize>,
 	#[arg(long, conflicts_with = "try-count")]
 	record: bool,
+	/*#[arg(long, name = "use-pso-de")]
+	use_pso_de: bool,
+	#[arg(long, conflicts_with = "use-pso-de")]
+	use_de: bool*/
+	//#[arg(long)]
+	//test_flag: bool
 }
 
 struct BatchRunData {
@@ -98,6 +105,67 @@ pub unsafe extern "C" fn shifted_sphere(input: de::Vector) -> f64 {
 	return result;
 }
 
+pub fn exp(x: f64) -> f64 {
+	return x.exp();
+}
+
+pub fn cos(x: f64) -> f64 {
+	return x.cos();
+}
+
+pub fn sqrt(x: f64) -> f64 {
+	return x.sqrt();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ackley(input: de::Vector) -> f64 {
+	let mut sum1 = 0.0;
+	let mut sum2 = 0.0;
+	for i in 0..input.num_dimensions as isize {
+		unsafe {
+			sum1 += *input.coordinates.offset(i) * *input.coordinates.offset(i);
+			sum2 += (TAU * *input.coordinates.offset(i)).cos();
+		}
+	}
+	let n = input.num_dimensions as f64;
+	return -20.0 * exp(-0.2 * sqrt(sum1 / n)) - exp(sum2 / n) + 20.0 + exp(1.0);
+
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rastrigin(input: de::Vector) -> f64 {
+	let mut result = 0.0;
+	for i in 0..input.num_dimensions as isize {
+		unsafe {
+			let  x = *input.coordinates.offset(i);
+			result += x*x - 10.0 * cos(TAU*x) + 10.0;
+		}
+	}
+	return result;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn weierstrass(input: de::Vector) -> f64 {
+	let a = 0.5 as f64;
+	let b = 3.0 as f64;
+	let k_max = 20;
+	let mut double_sum = 0.0;
+	let mut single_sum = 0.0;
+	for i in 0..input.num_dimensions as isize {
+		let  x = *input.coordinates.offset(i);
+		let mut embedded_sum = 0.0;
+		for k in 0..k_max as isize {
+			embedded_sum += a.powi(k as i32) * cos(TAU * b.powi(k as i32) * (x+0.5));
+		}
+		double_sum += embedded_sum;
+	}
+	for k in 0..k_max as isize {
+		single_sum += a.powi(k as i32) * cos(TAU * b.powi(k as i32) * 0.5);
+	}
+	return double_sum - (input.num_dimensions as f64) * single_sum;
+}
+
+
 // Quick&dirty test for de_minimum_stub and de_minimum
 fn de_test() {
 	println!("Hello from rust!");
@@ -105,10 +173,10 @@ fn de_test() {
 	// [Test the DE library]
 	let stop_condition = de::DeStopCondition {
 		stype: de::DeStopType::StopAfterIters,
-		union: de::DeLimitation { iters: 100 }
+		union: de::DeLimitation { iters: 1000 }
 	};
 	let mut config = de::DeConfig {
-		population_size: 100,
+		population_size: 1000,
 		crossover_probability: 0.5,
 		amplification_factor: 0.5,
 		lambda: 0.5,
@@ -117,8 +185,8 @@ fn de_test() {
 	// Use the holder function and its bounds (declared in src/functions.rs)
 	let mut target = de::DeOptimizationTarget {
 		//f: particle_swarm::functions::Holder::get_function(&self),
-		f: shifted_sphere,
-		num_dimensions: 2,
+		f: /*shifted_sphere*//*ackley*//*rastrigin*/weierstrass,
+		num_dimensions: 30,
 		/*left_bound::get_bounds().0[0],
 		right_bound::get_bounds().1[0]*/
 		left_bound: -10.0,
@@ -146,6 +214,10 @@ fn de_test() {
 		unsafe {
 			println!("Result coordinate {}: {}", i, *result.coordinates.offset(i));
 		}
+	}
+
+	unsafe {
+		println!("Extreme function value: {}", weierstrass(result));
 	}
 	
 	// Free the result
