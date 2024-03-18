@@ -23,6 +23,8 @@ struct Config {
 	diff_population: usize,
 	#[arg(long = "diff-iters")]
 	differential_iterations: usize,
+	#[arg(long = "lambda")]
+	lambda: f64,
 	#[arg(long = "try-count")]
 	try_count: Option<usize>,
 	#[command(subcommand)]
@@ -36,6 +38,12 @@ enum ComputationMode {
 		particles: usize,
 		#[arg(long = "part-iters")]
 		particle_iterations: usize,
+		#[arg(long)]
+		social_coefficient: f64,
+		#[arg(long)]
+		cognitive_coefficient: f64,
+		#[arg(long)]
+		inertia_coefficient: f64
 	},
 }
 
@@ -257,7 +265,7 @@ fn main() {
 			let mut threads = Vec::with_capacity(num_cpus::get());
 			
 			match config.command {
-				Some(ComputationMode::DiffPart { particles, particle_iterations }) => {
+				Some(ComputationMode::DiffPart { particles, particle_iterations, social_coefficient, cognitive_coefficient, inertia_coefficient }) => {
 					/*// hardcoded bounds because higher values are invalid
 					let world = EvolvingParticles::new(config.diff_population, config.crossover_possibility, config.diff_weight, (0.0, 1.0), particles, function.get_function(), bounds, particle_iterations);
 					for _ in 0..num_cpus::get() {
@@ -308,17 +316,20 @@ fn main() {
 		let mut threads = Vec::new();
 		for (function_name, function) in test_functions {
 			let c_func = function.get_c_function();
+			let func = function.get_function();
 			let bounds = function.get_bounds();
 			match config.command {
-				Some(ComputationMode::DiffPart { particles, particle_iterations }) => {
+				Some(ComputationMode::DiffPart { particles, particle_iterations, social_coefficient, cognitive_coefficient, inertia_coefficient }) => {
 					/*threads.push(std::thread::spawn(move || {
 						let mut world = EvolvingParticles::new(config.diff_population, config.crossover_possibility, config.diff_weight, (0.0, 1.0), particles, func, bounds, particle_iterations);
 						world.do_all_iterations(config.differential_iterations);
 						println!("{}: Found optimum at {:?} = {}", function_name, world.get_best_solution().coordinates, func(world.get_best_solution()));
 					}));*/
 
-					threads.push(std::thread::spawn(move || { //STUB
-						
+					threads.push(std::thread::spawn(move || {
+						let mut world = WorldState::new(particles, func, bounds, social_coefficient, cognitive_coefficient, inertia_coefficient, config.diff_population, config.crossover_possibility, config.diff_weight, config.lambda, config.differential_iterations);
+						world.do_all_iterations(particles);
+						println!("{}: Found optimum at {:?} = {}", function_name, world.best_solution.coordinates, func(world.best_solution));
 					}));
 				}
 				None => {
