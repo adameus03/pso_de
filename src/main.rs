@@ -261,6 +261,8 @@ fn main() {
 	if let Some(tries) = config.try_count {
 		for (function_name, function) in test_functions {
 			let bounds = function.get_bounds();
+			let func = function.get_function();
+			let c_func = function.get_c_function();
 			let tries_per_thread = tries.div_ceil(num_cpus::get());
 			let mut threads = Vec::with_capacity(num_cpus::get());
 			
@@ -280,9 +282,17 @@ fn main() {
 							return run_stats;
 						}));
 					}*/
-					for _ in 0..num_cpus::get() { //STUB
+					let world = WorldState::new(particles, func, bounds, social_coefficient, cognitive_coefficient, inertia_coefficient, config.diff_population, config.crossover_possibility, config.diff_weight, config.lambda, config.differential_iterations);
+					for _ in 0..num_cpus::get() {
+						let mut thread_world = world.clone();
 						threads.push(std::thread::spawn(move || {
-							return BatchRunData::new();
+							let mut run_stats = BatchRunData::new();
+							for _ in 0..tries_per_thread {
+								thread_world.do_all_iterations(particle_iterations);
+								run_stats += func(thread_world.best_solution);
+								thread_world.reset();
+							}
+							return run_stats;
 						}));
 					}
 				}
@@ -300,9 +310,41 @@ fn main() {
 							return run_stats;
 						}));
 					}*/
-					threads.push(std::thread::spawn(move || { //STUB
-						return BatchRunData::new();
-					}));
+					let stop_condition = de::DeStopCondition {
+						stype: de::DeStopType::StopAfterIters,
+						union: de::DeLimitation { iters: config.differential_iterations as u64 }
+					};
+					let mut config = de::DeConfig {
+						population_size: config.diff_population as u32,
+						crossover_probability: config.crossover_possibility,
+						amplification_factor: config.diff_weight,
+						lambda: 0.5,
+						stop_condition: stop_condition
+					};
+					// Use the holder function and its bounds (declared in src/functions.rs)
+					let mut target = de::DeOptimizationTarget {
+						//f: particle_swarm::functions::Holder::get_function(&self),
+						f: /*shifted_sphere*//*ackley*//*rastrigin*//*weierstrass*/c_func,
+						num_dimensions: 30,
+						/*left_bound::get_bounds().0[0],
+						right_bound::get_bounds().1[0]*/
+						left_bound: -10.0,
+						right_bound: 10.0
+					};
+
+					for _ in 0..num_cpus::get() {
+						threads.push(std::thread::spawn(move || {
+							//let mut target_copy = target.clone();
+							//let mut config_copy = config.clone();
+							let mut run_stats = BatchRunData::new();
+							for _ in 0..tries_per_thread {
+								let result = unsafe { de::de_minimum(&mut target, &mut config, ptr::null_mut()) };
+								unsafe { run_stats += c_func(result, ptr::null_mut()); }
+							}
+							return run_stats;
+						}));
+					}
+					
 				}
 			}
 			
@@ -328,7 +370,7 @@ fn main() {
 
 					threads.push(std::thread::spawn(move || {
 						let mut world = WorldState::new(particles, func, bounds, social_coefficient, cognitive_coefficient, inertia_coefficient, config.diff_population, config.crossover_possibility, config.diff_weight, config.lambda, config.differential_iterations);
-						world.do_all_iterations(particles);
+						world.do_all_iterations(particle_iterations);
 						println!("{}: Found optimum at {:?} = {}", function_name, world.best_solution.coordinates, func(world.best_solution));
 					}));
 				}

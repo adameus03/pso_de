@@ -208,18 +208,3 @@ vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* 
     return retVec;
     
 }
-
-/*vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig) {
-    vector_t v = { .num_dimensions = pOptimizationTarget->num_dimensions };
-    de_vector_allocate_coordinates (&v);
-    //memset (v.coordinates, 1, v.num_dimensions * sizeof(double));
-    for (uint32_t i = 0; i < v.num_dimensions; i++) {
-        //v.coordinates[i] = v.num_dimensions - i - 0.35;
-        v.coordinates[i] = 1;
-    }
-    double val = pOptimizationTarget->f(v);
-    for (uint32_t i = 0; i < v.num_dimensions; i++) {
-        v.coordinates[i] = val;
-    }
-    return v;
-}*/

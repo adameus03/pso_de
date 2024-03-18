@@ -27,24 +27,28 @@ impl Vector {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub enum DeStopType {
     StopAfterIters,
     StopWhenSatisfied
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union DeLimitation {
     pub iters: u64,
     pub accuracy: c_double
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct DeStopCondition {
     pub stype: DeStopType,
     pub union: DeLimitation
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct DeConfig {
     pub population_size: u32,
     pub crossover_probability: c_double,
@@ -54,6 +58,7 @@ pub struct DeConfig {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct DeOptimizationTarget {
     pub f: unsafe extern "C" fn(Vector, *mut c_void) -> c_double,
     pub num_dimensions: u32,
