@@ -2,3 +2,8 @@
 /output
 /output_aggregate
 src/c/build
+flamegraph.svg
+old_flamegraph.svg
+old_flamegraph_psode8.svg
+perf.data
+perf.data.old

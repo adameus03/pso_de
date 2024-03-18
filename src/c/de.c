@@ -1,6 +1,9 @@
 #include "de.h"
 #include <stdio.h> // for printing to stderr
-#include <time.h> // for srand
+#include <time.h>
+#include <math.h>
+#include "mtwister.h"
+
 
 typedef struct {
     vectorBuf_t members; /** @optimize memory */
@@ -16,11 +19,14 @@ typedef struct {
     de_population_t main_population;
     de_population_t probe_population;
     pVector_t p_main_best; double p_main_best_val;
+    MTRand mt_rand;
 } de_workspace_t;
 
 typedef de_workspace_t* pDeWorkspace_t;
 
 void de_workspace_init (pDeWorkspace_t pWorkspace, uint32_t populationSize, uint32_t numDimensions) {
+    pWorkspace->mt_rand = seedRand(time(0));
+
     pWorkspace->main_population.size = populationSize;
     pWorkspace->probe_population.size = populationSize;
     de_population_allocate_members (&pWorkspace->main_population);
@@ -63,7 +69,7 @@ void de_generate_main_population(pDeWorkspace_t pWorkspace, uint32_t numDimensio
     for (uint32_t i = 0; i < pWorkspace->main_population.size; i++) {
         pVector_t pVec = &pWorkspace->main_population.members[i];
         for (uint32_t j = 0; j < numDimensions; j++) {
-            pVec->coordinates[j] = leftBound + (rightBound - leftBound) * (double)rand() / RAND_MAX;
+            pVec->coordinates[j] = leftBound + (rightBound - leftBound) * fmod(genRand(&pWorkspace->mt_rand), 1.0);
         }
     }
 }
@@ -110,10 +116,10 @@ void de_mutate(pDeWorkspace_t pWorkspace, pDeOptimizationTarget_t pTarget, pDeCo
         uint32_t r2;
         uint32_t r3;
         do {
-            r2 = rand() % pWorkspace->main_population.size;
+            r2 = genRandLong(&pWorkspace->mt_rand) % pWorkspace->main_population.size;
         } while (r2 == i);
         do {
-            r3 = rand() % pWorkspace->main_population.size;
+            r3 = genRandLong(&pWorkspace->mt_rand) % pWorkspace->main_population.size;
         } while (r3 == i || r3 == r2);
         pVector_t pX2 = &pWorkspace->main_population.members[r2];
         pVector_t pX3 = &pWorkspace->main_population.members[r3];
@@ -138,9 +144,9 @@ void de_crossover(pDeWorkspace_t pWorkspace, pDeConfig_t pConfig) {
         pVector_t pProbeVec = &pWorkspace->probe_population.members[i];
         pVector_t pMainVec = &pWorkspace->main_population.members[i];
 
-        uint32_t d = rand() % pProbeVec->num_dimensions;
+        uint32_t d = genRandLong(&pWorkspace->mt_rand) % pProbeVec->num_dimensions;
         for (uint32_t j = 0; j < pProbeVec->num_dimensions; j++) {
-            double r = rand() % pProbeVec->num_dimensions;
+            double r = fmod(genRand(&pWorkspace->mt_rand), 1.0);
             if (r < CR || j == d) {
                 // do nothing
             } else {
@@ -180,8 +186,7 @@ uint8_t de_check_stop_condition(uint64_t iter_count, pDeConfig_t pConfig, pDeWor
 }
 
 vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig, void* pUserData) {
-    srand(time(NULL)); // Initialize rng
-    printf("Calculating de_minimum\n");
+    
     de_workspace_t workspace;
     de_workspace_init (&workspace, pConfig->population_size, pOptimizationTarget->num_dimensions);
     de_generate_main_population (&workspace, pOptimizationTarget->num_dimensions, pOptimizationTarget->left_bound, pOptimizationTarget->right_bound);
