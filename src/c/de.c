@@ -181,7 +181,7 @@ uint8_t de_check_stop_condition(uint64_t iter_count, pDeConfig_t pConfig, pDeWor
 
 vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig, void* pUserData) {
     srand(time(NULL)); // Initialize rng
-    printf("I'm here\n");//debug
+    printf("Calculating de_minimum\n");
     de_workspace_t workspace;
     de_workspace_init (&workspace, pConfig->population_size, pOptimizationTarget->num_dimensions);
     de_generate_main_population (&workspace, pOptimizationTarget->num_dimensions, pOptimizationTarget->left_bound, pOptimizationTarget->right_bound);

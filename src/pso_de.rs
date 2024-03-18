@@ -1,9 +1,7 @@
-use std::marker::ConstParamTy;
-
 use libc::{c_double, c_void};
 
 use crate::vector::VectorN;
-use crate::de::{self, de_vector_allocate_coordinates};
+use crate::de::{self};
 
 #[derive(Debug, Clone)]
 pub struct Particle<const N: usize> {
@@ -174,12 +172,6 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 	}
 
 	pub fn move_particles(&mut self) { // Use DE here
-		/*let mut pso_control_coefficients_vector = de::Vector::new();
-		// Allocate memory for the control coefficients
-		unsafe {
-			let p_vector = &mut pso_control_coefficients_vector as *mut de::Vector;
-			de_vector_allocate_coordinates(p_vector);
-		}*/
 
 		let de_stop_condition = de::DeStopCondition {
 			stype: de::DeStopType::StopAfterIters,
@@ -194,7 +186,6 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 			stop_condition: de_stop_condition
 		};
 
-		//let loss_function = get_c_pso_control_params_cost_function(self.clone());
 		let mut de_target = de::DeOptimizationTarget {
 			f: c_optimization_function_for_pso_control_params::<DIMENSIONS>,
 			num_dimensions: 3,
@@ -213,7 +204,6 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 
 		// Free the memory allocated inside de_manipulated_coeffs
 		unsafe {
-			//de::de_vector_free_coordinates(pso_control_coefficients_vector);
 			de::de_vector_free_coordinates(&mut de_manipulated_coeffs);
 		}
 

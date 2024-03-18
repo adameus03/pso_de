@@ -53,7 +53,3 @@ typedef de_config_t* pDeConfig_t;
 */
 vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig, void* pUserData);
 
-/**
- * If you need a stub, you can use this one
-*/
-//vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig);

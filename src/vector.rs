@@ -1,5 +1,4 @@
 use std::ops::{Mul, Add, Sub, AddAssign};
-use crate::de;
 
 #[derive(Clone, Debug, Copy)]
 pub struct VectorN<const N: usize> {
