@@ -13,7 +13,7 @@ typedef vector_t** pVectorBuf_t;
 void de_vector_allocate_coordinates (pVector_t pVec) { pVec->coordinates = malloc(pVec->num_dimensions * sizeof(double)); }
 void de_vector_free_coordinates (pVector_t pVec) { free(pVec->coordinates); }
 
-typedef double (*RdR_Function)(vector_t);
+typedef double (*RdR_Function)(vector_t, void*);
 
 typedef struct {
     RdR_Function f;
@@ -51,9 +51,9 @@ typedef de_config_t* pDeConfig_t;
  * Differential evolution with DE/rand_best/1/bin mutation
  * @attention The coordinates buffer of the returned vector need to be freed, please use `vector_free_coordinates(pVector_t)`
 */
-vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig);
+vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig, void* pUserData);
 
 /**
  * If you need a stub, you can use this one
 */
-vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig);
+//vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig);

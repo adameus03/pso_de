@@ -1,4 +1,9 @@
+use std::marker::ConstParamTy;
+
+use libc::{c_double, c_void};
+
 use crate::vector::VectorN;
+use crate::de::{self, de_vector_allocate_coordinates};
 
 #[derive(Debug, Clone)]
 pub struct Particle<const N: usize> {
@@ -25,6 +30,40 @@ impl<const N: usize> Particle<N> {
 }
 
 
+pub unsafe extern "C" fn c_optimization_function_for_pso_control_params<const DIMENSIONS: usize>(input: de::Vector, user_data: *mut c_void) -> c_double {
+	let world_state = &mut *(user_data as *mut WorldState<DIMENSIONS>);
+	return optimization_function_for_pso_control_params(world_state, input);
+}
+
+fn optimization_function_for_pso_control_params<const DIMENSIONS: usize>(ws: &mut WorldState<DIMENSIONS>, control_coeffs: de::Vector) -> f64 {
+	// Calculate and return loss
+	unsafe {
+		ws.social_coefficient = *control_coeffs.coordinates.offset(0);
+		ws.cognitive_coefficient = *control_coeffs.coordinates.offset(1);
+		ws.inertia_coefficient = *control_coeffs.coordinates.offset(2);
+	}
+	for particle in &mut ws.particles {
+		particle.social_coefficient = ws.social_coefficient;
+		particle.cognitive_coefficient = ws.cognitive_coefficient;
+		particle.inertia_coefficient = ws.inertia_coefficient;
+	}
+	
+	
+	for particle in &mut ws.particles {
+		particle.move_particle(ws.best_solution, &mut ws.random_generator);
+	}
+
+	let mut best_solution_value_for_pso_iteration = f64::INFINITY;
+	for particle in &mut ws.particles {
+		let particle_solution_val = (ws.function)(particle.coordinates);
+		if particle_solution_val < best_solution_value_for_pso_iteration {
+			best_solution_value_for_pso_iteration = particle_solution_val;
+		}
+	}
+	
+	return best_solution_value_for_pso_iteration;
+
+}
 
 #[derive(Debug, Clone)]
 pub struct WorldState<const DIMENSIONS: usize> {
@@ -38,15 +77,22 @@ pub struct WorldState<const DIMENSIONS: usize> {
 	cognitive_coefficient: f64,
 	inertia_coefficient: f64,
 	random_generator: fastrand::Rng,
+
+	/* DE - specific */
+	pub de_population_size: usize,
+	pub de_crossover_probability: f64,
+	pub de_diff_weight: f64,
+	pub de_lambda: f64,
+	pub de_num_iters: usize
 }
 
 impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
-	pub fn new(particle_count: usize, function: fn(VectorN<DIMENSIONS>) -> f64, bounds: (f64, f64), social_coefficient: f64, cognitive_coefficient: f64, inertia_coefficient: f64) -> Self {
+	pub fn new(particle_count: usize, function: fn(VectorN<DIMENSIONS>) -> f64, bounds: (f64, f64), social_coefficient: f64, cognitive_coefficient: f64, inertia_coefficient: f64, 
+			/*DE-specific */ de_population_size: usize, de_crossover_probability: f64, de_diff_weight: f64, de_lambda: f64, de_num_iters: usize) -> Self {
 		if bounds.0 >= bounds.1 {
 			panic!("Incorrect order of bounds or zero size");
 		}
 		let mut result = Self {
-			random_generator: fastrand::Rng::new(),
 			particles: Vec::with_capacity(particle_count),
 			function,
 			best_solution: VectorN::<DIMENSIONS>::default(),
@@ -56,6 +102,14 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 			social_coefficient,
 			cognitive_coefficient,
 			inertia_coefficient,
+			random_generator: fastrand::Rng::new(),
+
+			/* DE-specific */
+			de_population_size,
+			de_crossover_probability,
+			de_diff_weight,
+			de_lambda,
+			de_num_iters
 		};
 
 		result.create_particles();
@@ -119,7 +173,49 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 		}
 	}
 
-	pub fn move_particles(&mut self) {
+	pub fn move_particles(&mut self) { // Use DE here
+		let mut pso_control_coefficients_vector = de::Vector::new();
+		// Allocate memory for the control coefficients
+		unsafe {
+			let p_vector = &mut pso_control_coefficients_vector as *mut de::Vector;
+			de_vector_allocate_coordinates(p_vector);
+		}
+
+		let de_stop_condition = de::DeStopCondition {
+			stype: de::DeStopType::StopAfterIters,
+			union: de::DeLimitation { iters: self.de_num_iters as u64 }
+		};
+
+		let mut de_config = de::DeConfig {
+			population_size: self.de_population_size as u32,
+			crossover_probability: self.de_crossover_probability,
+			amplification_factor: self.de_diff_weight,
+			lambda: self.de_lambda,
+			stop_condition: de_stop_condition
+		};
+
+		//let loss_function = get_c_pso_control_params_cost_function(self.clone());
+		let mut de_target = de::DeOptimizationTarget {
+			f: c_optimization_function_for_pso_control_params::<DIMENSIONS>,
+			num_dimensions: 3,
+			left_bound: 0.0,
+			right_bound: 1.0,
+		};
+
+		let de_manipulated_coeffs = unsafe { de::de_minimum(&mut de_target, &mut de_config, &mut self.clone() as *mut WorldState<DIMENSIONS> as *mut c_void) };
+		
+		// Update the coefficients
+		unsafe {
+			self.social_coefficient = *de_manipulated_coeffs.coordinates.offset(0);
+			self.cognitive_coefficient = *de_manipulated_coeffs.coordinates.offset(1);
+			self.inertia_coefficient = *de_manipulated_coeffs.coordinates.offset(2);
+		}
+		for particle in &mut self.particles {
+			particle.social_coefficient = self.social_coefficient;
+			particle.cognitive_coefficient = self.cognitive_coefficient;
+			particle.inertia_coefficient = self.inertia_coefficient;
+		}
+
 		for particle in &mut self.particles {
 			particle.move_particle(self.best_solution, &mut self.random_generator);
 		}

@@ -4,6 +4,7 @@
 const FN_SIZE: usize = 30;
 
 use std::ops::AddAssign;
+use std::ptr;
 
 use clap::{Parser, Subcommand};
 use particle_swarm::pso_de::WorldState;
@@ -87,7 +88,7 @@ impl AddAssign<f64> for BatchRunData {
 }
 
 ///<test functions for DE>
-#[no_mangle]
+/*#[no_mangle]
 pub unsafe extern "C" fn sphere(input: de::Vector) -> f64 {
 	let mut result = 0.0;
 	for i in 0..input.num_dimensions as isize {
@@ -232,7 +233,7 @@ fn de_test() {
 	unsafe { de::de_vector_free_coordinates(&mut result) };
 	
 	// [/Test the DE library]
-}
+}*/
 ///</test functions for DE>
 
 fn main() {
@@ -350,7 +351,7 @@ fn main() {
 							right_bound: 10.0
 						};
 						println!("Calling de_minimum");
-						let mut result = unsafe { de::de_minimum(&mut target, &mut config) };
+						let mut result = unsafe { de::de_minimum(&mut target, &mut config, ptr::null_mut()) };
 						println!("de_minimum call returned.");
 						// Print the de_minimum result coordinates
 						for i in 0..result.num_dimensions as isize {
@@ -360,7 +361,7 @@ fn main() {
 						}
 
 						unsafe {
-							println!("Extreme function value: {}", c_func(result));
+							println!("Extreme function value: {}", c_func(result, ptr::null_mut()));
 						}
 						
 						// Free the result

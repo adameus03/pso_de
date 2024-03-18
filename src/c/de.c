@@ -54,9 +54,9 @@ void de_workspace_deinit (pDeWorkspace_t pWorkspace) {
     de_population_free_members (&pWorkspace->probe_population);
 }
 
-void de_workspace_set_best(pDeWorkspace_t pWorkspace, pVector_t pBest, pDeOptimizationTarget_t pTarget) {
+void de_workspace_set_best(pDeWorkspace_t pWorkspace, pVector_t pBest, pDeOptimizationTarget_t pTarget, void* pUserData) {
     pWorkspace->p_main_best = pBest;
-    pWorkspace->p_main_best_val = pTarget->f(*pBest);
+    pWorkspace->p_main_best_val = pTarget->f(*pBest, pUserData);
 }
 
 void de_generate_main_population(pDeWorkspace_t pWorkspace, uint32_t numDimensions, double leftBound, double rightBound) {
@@ -68,12 +68,12 @@ void de_generate_main_population(pDeWorkspace_t pWorkspace, uint32_t numDimensio
     }
 }
 
-pVector_t de_get_best(pDePopulation_t pPopulation, RdR_Function f) {
+pVector_t de_get_best(pDePopulation_t pPopulation, RdR_Function f, void* pUserData) {
     pVector_t pBest = &pPopulation->members[0];
-    double bestVal = f(*pBest);
+    double bestVal = f(*pBest, pUserData);
     for (uint32_t i = 0; i < pPopulation->size; i++) {
         pVector_t pVec = &pPopulation->members[i];
-        double val = f(*pVec);
+        double val = f(*pVec, pUserData);
         if (val < bestVal) {
             pBest = pVec;
             bestVal = val;
@@ -85,9 +85,9 @@ pVector_t de_get_best(pDePopulation_t pPopulation, RdR_Function f) {
 /**
  * Reproduce the population, so that it can be mutated with DE/rand_best/1/bin
 */
-void de_reproduce(pDeWorkspace_t pWorkspace, pDeOptimizationTarget_t pTarget, pDeConfig_t pConfig) {
-    pVector_t pBest = de_get_best(&pWorkspace->main_population, pTarget->f);
-    de_workspace_set_best(pWorkspace, pBest, pTarget); // Let the workspace know who is the best
+void de_reproduce(pDeWorkspace_t pWorkspace, pDeOptimizationTarget_t pTarget, pDeConfig_t pConfig, void* pUserData) {
+    pVector_t pBest = de_get_best(&pWorkspace->main_population, pTarget->f, pUserData);
+    de_workspace_set_best(pWorkspace, pBest, pTarget, pUserData); // Let the workspace know who is the best
     double lambda = pConfig->lambda;
 
     for (uint32_t i = 0; i < pWorkspace->main_population.size; i++) {
@@ -150,12 +150,12 @@ void de_crossover(pDeWorkspace_t pWorkspace, pDeConfig_t pConfig) {
     }
 }
 
-void de_select(pDeWorkspace_t pWorkspace, pDeOptimizationTarget_t pTarget) {
+void de_select(pDeWorkspace_t pWorkspace, pDeOptimizationTarget_t pTarget, void* pUserData) {
     for (uint32_t i = 0; i < pWorkspace->main_population.size; i++) {
         pVector_t pMainVec = &pWorkspace->main_population.members[i];
         pVector_t pProbeVec = &pWorkspace->probe_population.members[i];
-        double mainVal = pTarget->f(*pMainVec);
-        double probeVal = pTarget->f(*pProbeVec);
+        double mainVal = pTarget->f(*pMainVec, pUserData);
+        double probeVal = pTarget->f(*pProbeVec, pUserData);
         if (probeVal < mainVal) {
             for (uint32_t j = 0; j < pMainVec->num_dimensions; j++) {
                 pMainVec->coordinates[j] = pProbeVec->coordinates[j];
@@ -179,7 +179,7 @@ uint8_t de_check_stop_condition(uint64_t iter_count, pDeConfig_t pConfig, pDeWor
     }
 }
 
-vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig) {
+vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig, void* pUserData) {
     srand(time(NULL)); // Initialize rng
 
     de_workspace_t workspace;
@@ -188,14 +188,14 @@ vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* 
     
     uint64_t iter_count = 0U;
     do {
-        de_reproduce (&workspace, pOptimizationTarget, pConfig);
+        de_reproduce (&workspace, pOptimizationTarget, pConfig, pUserData);
         de_mutate (&workspace, pOptimizationTarget, pConfig);
         de_crossover (&workspace, pConfig);
-        de_select (&workspace, pOptimizationTarget);
+        de_select (&workspace, pOptimizationTarget, pUserData);
         iter_count++;
     } while (!de_check_stop_condition(iter_count, pConfig, &workspace));
     
-    pVector_t pBest = de_get_best (&workspace.main_population, pOptimizationTarget->f);
+    pVector_t pBest = de_get_best (&workspace.main_population, pOptimizationTarget->f, pUserData);
 
     vector_t retVec = { .num_dimensions = pBest->num_dimensions };
     de_vector_allocate_coordinates (&retVec);
@@ -209,7 +209,7 @@ vector_t de_minimum(de_optimization_target_t* pOptimizationTarget, de_config_t* 
     
 }
 
-vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig) {
+/*vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_config_t* pConfig) {
     vector_t v = { .num_dimensions = pOptimizationTarget->num_dimensions };
     de_vector_allocate_coordinates (&v);
     //memset (v.coordinates, 1, v.num_dimensions * sizeof(double));
@@ -222,4 +222,4 @@ vector_t de_minimum_stub(de_optimization_target_t* pOptimizationTarget, de_confi
         v.coordinates[i] = val;
     }
     return v;
-}
+}*/

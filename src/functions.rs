@@ -1,5 +1,7 @@
 use std::{f64::consts::{TAU, E}, collections::HashMap};
 
+use libc::c_void;
+
 use crate::vector::VectorN;
 use crate::vector::QuickFold;
 
@@ -7,7 +9,7 @@ use crate::de;
 
 pub trait Function<const N: usize> {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64;
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64;
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64;
 	fn get_bounds(&self) -> (f64, f64);
 }
 
@@ -24,7 +26,7 @@ impl<const N: usize> Function<N> for Ackley {
 		return ackley;
 	}
 
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_ackley::<N>;
 	}
 
@@ -44,7 +46,7 @@ impl<const N: usize> Function<N> for Schwefel {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64 {
 		return schwefel;
 	}
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_schwefel::<N>;
 	}
 	fn get_bounds(&self) -> (f64, f64) {
@@ -64,7 +66,7 @@ impl<const N: usize> Function<N> for Brown {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64 {
 		return brown;
 	}
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_brown::<N>;
 	}
 	fn get_bounds(&self) -> (f64, f64) {
@@ -84,7 +86,7 @@ impl<const N: usize> Function<N> for Rastrigin {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64 {
 		return rastrigin;
 	}
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_rastrigin::<N>;
 	}
 	fn get_bounds(&self) -> (f64, f64) {
@@ -104,7 +106,7 @@ impl<const N: usize> Function<N> for Schwefel2 {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64 {
 		return schwefel2;
 	}
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_schwefel2::<N>;
 	}
 	fn get_bounds(&self) -> (f64, f64) {
@@ -123,7 +125,7 @@ impl<const N: usize> Function<N> for Solomon {
 	fn get_function(&self) -> fn(input: VectorN<N>) -> f64 {
 		return solomon;
 	}
-	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector) -> f64 {
+	fn get_c_function(&self) -> unsafe extern "C" fn(input: de::Vector, p_user_data: *mut c_void) -> f64 {
 		return c_solomon::<N>;
 	}
 	fn get_bounds(&self) -> (f64, f64) {
@@ -135,28 +137,28 @@ impl<const N: usize> Function<N> for Solomon {
 	
 }*/
 
-pub unsafe extern "C" fn c_ackley<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_ackley<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	return ackley(input.to_c::<N>());
 }
 
-pub unsafe extern "C" fn c_schwefel<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_schwefel<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	//return schwefel(c_vector_to_rust(input));
 	return schwefel(input.to_c::<N>());
 }
 
-pub unsafe extern "C" fn c_brown<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_brown<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	return brown(input.to_c::<N>());
 }
 
-pub unsafe extern "C" fn c_rastrigin<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_rastrigin<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	return rastrigin(input.to_c::<N>());
 }
 
-pub unsafe extern "C" fn c_schwefel2<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_schwefel2<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	return schwefel2(input.to_c::<N>());
 }
 
-pub unsafe extern "C" fn c_solomon<const N: usize>(input: de::Vector) -> f64 {
+pub unsafe extern "C" fn c_solomon<const N: usize>(input: de::Vector, _p_user_data: *mut c_void) -> f64 {
 	return solomon(input.to_c::<N>());
 }
 
