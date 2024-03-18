@@ -174,12 +174,12 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 	}
 
 	pub fn move_particles(&mut self) { // Use DE here
-		let mut pso_control_coefficients_vector = de::Vector::new();
+		/*let mut pso_control_coefficients_vector = de::Vector::new();
 		// Allocate memory for the control coefficients
 		unsafe {
 			let p_vector = &mut pso_control_coefficients_vector as *mut de::Vector;
 			de_vector_allocate_coordinates(p_vector);
-		}
+		}*/
 
 		let de_stop_condition = de::DeStopCondition {
 			stype: de::DeStopType::StopAfterIters,
@@ -202,7 +202,7 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 			right_bound: 1.0,
 		};
 
-		let de_manipulated_coeffs = unsafe { de::de_minimum(&mut de_target, &mut de_config, &mut self.clone() as *mut WorldState<DIMENSIONS> as *mut c_void) };
+		let mut de_manipulated_coeffs = unsafe { de::de_minimum(&mut de_target, &mut de_config, &mut self.clone() as *mut WorldState<DIMENSIONS> as *mut c_void) };
 		
 		// Update the coefficients
 		unsafe {
@@ -210,6 +210,13 @@ impl<const DIMENSIONS: usize> WorldState<DIMENSIONS> {
 			self.cognitive_coefficient = *de_manipulated_coeffs.coordinates.offset(1);
 			self.inertia_coefficient = *de_manipulated_coeffs.coordinates.offset(2);
 		}
+
+		// Free the memory allocated inside de_manipulated_coeffs
+		unsafe {
+			//de::de_vector_free_coordinates(pso_control_coefficients_vector);
+			de::de_vector_free_coordinates(&mut de_manipulated_coeffs);
+		}
+
 		for particle in &mut self.particles {
 			particle.social_coefficient = self.social_coefficient;
 			particle.cognitive_coefficient = self.cognitive_coefficient;
